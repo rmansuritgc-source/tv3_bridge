@@ -1,4 +1,3 @@
-
 from flask import Flask, Response, request
 import requests
 from urllib.parse import urljoin
@@ -6,18 +5,20 @@ import traceback
 
 app = Flask(__name__)
 
-# تغییر لینک به لینک اختصاصی تلوبیون که خودت پیدا کرده بودی
-TARGET_URL = "https://telewebion-live.cdn.ir/telewebion/tv3/playlist.m3u8"
+# لینکِ اصلی و خام ویدیو که سایت tv3.ir/live از آن استفاده می‌کند
+TARGET_URL = "https://live.irib.ir/live/smil:tv3.smil/playlist.m3u8"
 HEADERS = {
-    "Referer": "https://telewebion.com/",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    "Referer": "https://tv3.ir/",
+    "Origin": "https://tv3.ir",
+    "Accept": "*/*",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
 @app.route('/')
 def proxy_master():
     try:
         r = requests.get(TARGET_URL, headers=HEADERS, timeout=15)
-        r.raise_for_status()  # اگر سرور تلوبیون ارور داد، پایتون متوجه شود
+        r.raise_for_status()
         lines = r.text.split('\n')
         new_lines = []
         for line in lines:
@@ -28,7 +29,7 @@ def proxy_master():
                 new_lines.append(line)
         return Response('\n'.join(new_lines), mimetype="application/vnd.apple.mpegurl")
     except Exception as e:
-        print("خطا در دریافت لینک اصلی:", traceback.format_exc())
+        print("خطا در دریافت لینک اصلی صدا و سیما:", traceback.format_exc())
         return Response(f"Error: {str(e)}", status=500)
 
 @app.route('/sub')
