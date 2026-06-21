@@ -1,3 +1,4 @@
+
 from flask import Flask, Response, request
 import requests
 from urllib.parse import urljoin
@@ -18,14 +19,11 @@ def proxy_master():
         new_lines = []
         for line in lines:
             if line.strip() and not line.startswith('#'):
-                if not line.startswith('http'):
-                    absolute_url = urljoin(TARGET_URL, line)
-                    new_lines.append(f"/sub?url={absolute_url}")
-                else:
-                    new_lines.append(f"/sub?url={line}")
+                absolute_url = urljoin(TARGET_URL, line)
+                new_lines.append(f"/sub?url={absolute_url}")
             else:
                 new_lines.append(line)
-        return Response('\n'.join(new_lines), content_type="application/vnd.apple.mpegurl")
+        return Response('\n'.join(new_lines), mimetype="application/vnd.apple.mpegurl")
     except Exception as e:
         return Response(str(e), status=500)
 
@@ -33,19 +31,22 @@ def proxy_master():
 def proxy_sub():
     url = request.args.get('url')
     try:
-        r = requests.get(url, headers=HEADERS, timeout=10)
+        r = requests.get(url, headers=HEADERS, stream=True, timeout=10)
+        
+        # رفع باگ: اگر فایل قطعه ویدیویی (.ts) است، آن را مستقیماً و بدون تغییر استریم کن
+        if '.ts' in url or r.headers.get('Content-Type') in ['video/mp2t', 'video/MP2T']:
+            return Response(r.iter_content(chunk_size=1024*1024), content_type='video/MP2T')
+            
+        # اگر فایل لیست پخش است، آن را بازنویسی کن
         lines = r.text.split('\n')
         new_lines = []
         for line in lines:
             if line.strip() and not line.startswith('#'):
-                if not line.startswith('http'):
-                    absolute_url = urljoin(url, line)
-                    new_lines.append(absolute_url)
-                else:
-                    new_lines.append(line)
+                absolute_url = urljoin(url, line)
+                new_lines.append(f"/sub?url={absolute_url}")
             else:
                 new_lines.append(line)
-        return Response('\n'.join(new_lines), content_type="application/vnd.apple.mpegurl")
+        return Response('\n'.join(new_lines), mimetype="application/vnd.apple.mpegurl")
     except Exception as e:
         return Response(str(e), status=500)
 
